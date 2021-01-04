@@ -1,0 +1,60 @@
+trigger:
+  none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+parameters:
+- name: bump
+  type: string
+  default: patch
+  values:
+  - major
+  - minor
+  - patch
+
+variables:
+- group: resources
+- group: application
+- name: is_main
+  value: False # $[eq(variables['Build.SourceBranch'], 'refs/heads/main')]
+- name: buildnumber
+  value: $(Build.DefinitionName)_$(Build.Repository.Name)_$(Build.SourceBranchName)_$(Build.BuildNumber)
+# artifact_repository, package_name set via variable group
+
+stages:
+- stage: Building
+  displayName: Continuous Integration
+  jobs:
+  - job: Build
+    displayName: Build version
+
+    steps:
+    - checkout: self
+      persistCredentials: true
+
+    - bash: |
+        echo "Build reason: $(Build.Reason)"
+      displayName: Build Reason
+
+    - template: build-template.yml
+
+    - template: version-template.yml
+      parameters:
+        bump: '${{parameters.bump}}'
+        push_tag_enabled: False
+
+    - template: package-template.yml
+      parameters:
+        pip_upload_enabled: False
+
+
+- stage: Executing
+  dependsOn: Building
+  displayName: Executing in local agent
+  jobs:
+  - job: ExecuteArtifact
+    displayName: Execute console installed from artifacts
+    steps:
+    - checkout: none
+    - template: execute-artifact-template.yml

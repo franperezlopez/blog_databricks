@@ -1,0 +1,30 @@
+parameters:
+  - name: databricks_url
+    type: string
+  - name: databricks_token
+    type: string
+
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.8'
+  displayName: 'Use Python 3.8'
+
+- task: riserrad.azdo-databricks.azdo-databricks-configuredatabricks.configuredatabricks@0
+  displayName: 'Configure Databricks CLI'
+  inputs:
+    url: '${{parameters.databricks_url}}'
+    token: '${{parameters.databricks_token}}'
+
+- download: current
+  artifact: dropArtifacts
+
+- bash: |
+    ls $(Pipeline.Workspace)/dropArtifacts/*.egg | xargs -I {} cp {} $(PACKAGE_NAME).egg
+    ls -la
+  displayName: Rename egg artifact
+
+- bash: |
+    databricks --profile AZDO fs cp --overwrite $(PACKAGE_NAME).egg dbfs:/dist/$(PACKAGE_NAME).egg
+    databricks --profile AZDO fs ls dbfs:/dist
+  displayName: Copy package $(PACKAGE_NAME) to dbfs:/dist

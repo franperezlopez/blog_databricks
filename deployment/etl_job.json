@@ -1,0 +1,32 @@
+{
+    "name": "SPARK CONSOLE",
+    "new_cluster": {
+        "spark_version": "7.1.x-cpu-ml-scala2.12",
+        "spark_conf": {
+            "spark.databricks.delta.preview.enabled": "true",
+            "spark.databricks.service.server.enabled": "true",
+            "spark.master": "local[*]",
+            "spark.databricks.cluster.profile": "singleNode"
+        },
+        "node_type_id": "Standard_DS3_v2",
+        "driver_node_type_id": "Standard_DS3_v2",
+        "custom_tags": {
+            "ResourceClass": "SingleNode"
+        },
+        "spark_env_vars": { },
+        "enable_elastic_disk": true,
+        "num_workers": 0
+    },
+    "libraries": [
+        {
+            "egg": "dbfs://dist/product_sales_ml_etl.egg"
+        }
+    ],
+    "timeout_seconds": 3600,
+    "max_retries": 1,
+    "spark_python_task": {
+        "python_file": "dbfs://dist/app_main.py",
+        "parameters": []
+    },
+    "max_concurrent_runs": 1
+}

@@ -1,0 +1,44 @@
+parameters:
+  - name: pip_upload_enabled
+    default: false
+    type: boolean
+
+steps:
+- bash: |
+    find . -type f -name "*.py[co]" -delete
+    find . -type d -name "__pycache__" -delete
+    rm -rf coverage
+    rm -rf junit
+    rm -rf .mypy_cache
+  displayName: Clean up files
+
+- bash: |
+    python setup.py bdist_egg bdist_wheel
+  displayName: Execute setup packaging
+
+- task: CopyFiles@2
+  displayName: 'Copy to Artifacts'
+  inputs:
+    Contents: |
+      **/*.egg
+      **/*.whl
+      **/*_main.py
+      **/*.json
+    TargetFolder: '$(Build.ArtifactStagingDirectory)/artifacts'
+    flattenFolders: true
+
+- publish: '$(Build.ArtifactStagingDirectory)/artifacts'
+  displayName: 'Publish artifacts'
+  artifact: dropArtifacts
+
+- task: TwineAuthenticate@0
+  condition: ${{ parameters.pip_upload_enabled }}
+  inputs:
+    artifactFeeds: $(artifact_repository)
+    publishPackageMetadata: true
+
+- bash: |
+    pip install twine
+    python -m twine upload --config-file $(PYPIRC_PATH) -r $(ARTIFACT_REPOSITORY) --verbose --disable-progress-bar dist/*
+  condition: ${{ parameters.pip_upload_enabled }}
+  displayName: Upload artifacts to feed

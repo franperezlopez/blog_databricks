@@ -1,0 +1,78 @@
+
+trigger:
+  batch: True
+  branches:
+    include:
+    - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+parameters:
+- name: bump
+  type: string
+  default: patch
+  values:
+  - major
+  - minor
+  - patch
+
+variables:
+- group: resources
+- group: application
+- name: is_main
+  value: True
+- name: buildnumber
+  value: $(Build.DefinitionName)_$(Build.Repository.Name)_$(Build.SourceBranchName)_$(Build.BuildNumber)
+# artifact_repository, package_name set via variable group
+
+stages:
+- stage: Building
+  displayName: Continuous Integration
+  jobs:
+  - job: Build
+    displayName: Build version
+
+    steps:
+    - checkout: self
+      persistCredentials: true
+
+    - bash: |
+        echo "Build reason: $(Build.Reason)"
+      displayName: Build Reason
+
+    - template: build-template.yml
+
+    - template: version-template.yml
+      parameters:
+        bump: '${{parameters.bump}}'
+        push_tag_enabled: True
+
+    - template: package-template.yml
+      parameters:
+        pip_upload_enabled: True
+
+
+- stage: Deploying
+  dependsOn: Building
+  displayName: Continuos Deployment
+  jobs:
+    - job: Deploy
+      displayName: Deploy Databricks
+
+      steps:
+      - checkout: none
+      - template: deploy-databricks-template.yml
+        parameters:
+          databricks_url: $(DATABRICKS_URL)
+          databricks_token: $(DATABRICKS_TOKEN)
+
+- stage: Executing
+  dependsOn: Building
+  displayName: Executing in local agent
+  jobs:
+  - job: Execute
+    displayName: Execute console installed from pip repository
+    steps:
+    - checkout: none
+    - template: execute-template.yml

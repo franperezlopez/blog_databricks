@@ -1,0 +1,41 @@
+parameters:
+- name: bump
+  type: string
+  default: patch
+  values:
+  - major
+  - minor
+  - patch
+- name: push_tag_enabled
+  type: boolean
+  default: false
+
+steps:
+- bash: |
+    pip install semver==2.13.0
+  displayName: Install semver
+
+- bash: |
+    git config user.name "etl_build_agent"
+    git config user.email "etl_build_agent@my.com"
+
+    export DESCRIBE=$(git describe --always --tags --long --first-parent)
+    export VERSION=$(echo $DESCRIBE | cut -d "-" -f 1)
+
+    echo "DESCRIBE: $DESCRIBE"
+    echo "##vso[task.setvariable variable=DESCRIBE]$DESCRIBE"
+    echo "VERSION pre-bump: $VERSION"
+    export VERSION=$(pysemver bump ${{ parameters.bump }} $VERSION)
+    echo "VERSION: $VERSION"
+    echo "##vso[task.setvariable variable=VERSION]$VERSION"
+    echo "BUILDNUMBER: $BUILDNUMBER"
+
+  displayName: create VERSION metadata
+
+- bash: |
+    echo "pushing TAG version to repository"
+    git tag -a "$VERSION" -m "Release v. $VERSION"
+    git push origin "$VERSION"
+
+  condition: ${{ parameters.push_tag_enabled }}
+  displayName: push VERSION

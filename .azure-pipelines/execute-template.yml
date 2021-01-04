@@ -1,0 +1,22 @@
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.8'
+  displayName: 'Use Python 3.8'
+
+- task: PipAuthenticate@1
+  displayName: 'Pip Authenticate'
+  inputs:
+    artifactFeeds: $(artifact_repository)
+    onlyAddExtraIndex: true
+
+- bash: |
+    pip install $(PACKAGE_NAME)
+    pip list
+  displayName: Install package from feed
+
+- bash: |
+    LOGURU_LEVEL=WARNING
+    python -m etl.console_main -v
+  displayName: Test etl.console_main
+

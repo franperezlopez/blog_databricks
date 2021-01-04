@@ -1,0 +1,5 @@
+pytest
+mypy
+pycodestyle
+setuptools
+wheel

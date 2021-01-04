@@ -1,0 +1,18 @@
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.8'
+  displayName: 'Use Python 3.8'
+
+- download: current
+  artifact: dropArtifacts
+
+- bash: |
+    ls $(Pipeline.Workspace)/dropArtifacts/*.whl | xargs -I {} pip install {}
+    pip list
+  displayName: Install package from feed
+
+- bash: |
+    LOGURU_LEVEL=WARNING
+    python -m etl.console_main -v
+  displayName: Test etl.console_main
